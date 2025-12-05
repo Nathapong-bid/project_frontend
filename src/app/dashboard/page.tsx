@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 // Mock Data for the graph
@@ -12,6 +13,8 @@ const chartData = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] max-w-5xl mx-auto px-6 py-12">
       {/* Header */}
@@ -126,7 +129,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-8 flex justify-center">
-          <button className="font-serif bg-[#1F2937] text-white px-12 py-3 rounded-full hover:bg-[#111827] transition font-medium text-sm shadow-md">
+          <button
+            onClick={() => router.push('/word-of-the-day')}
+            className="font-serif bg-[#1F2937] text-white px-12 py-3 rounded-full hover:bg-[#111827] transition font-medium text-sm shadow-md"
+          >
             Take the test
           </button>
         </div>
