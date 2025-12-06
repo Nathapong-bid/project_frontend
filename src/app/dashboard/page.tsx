@@ -1,19 +1,49 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { getScoreHistory, ScoreEntry } from '@/lib/progress';
+import { getStreak } from '@/lib/streak';
 
-// Mock Data for the graph
-const chartData = [
-  { name: 'Task 1', score: 6.5 },
-  { name: 'Task 2', score: 7.0 },
-  { name: 'Task 3', score: 6.0 },
-  { name: 'Task 4', score: 7.5 },
-  { name: 'Task 5', score: 8.0 },
-];
+const CustomTooltip = ({
+  active,
+  payload,
+  label
+}: {
+  active?: boolean;
+  payload?: { value: number }[];
+  label?: string;
+}) => {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-md">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-sm font-semibold text-gray-800">Score: {payload[0].value.toFixed(1)}</p>
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [history, setHistory] = useState<ScoreEntry[]>([]);
+  const [streak, setStreak] = useState<number>(1);
+
+  useEffect(() => {
+    setHistory(getScoreHistory());
+    setStreak(getStreak());
+  }, []);
+
+  const chartData = useMemo(() => {
+    return history
+      .slice(0, 8)
+      .reverse()
+      .map((entry, index) => ({
+        name: `Task ${index + 1}`,
+        score: entry.score
+      }));
+  }, [history]);
+
+  const hasHistory = chartData.length > 0;
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] max-w-5xl mx-auto px-6 py-12">
@@ -42,7 +72,7 @@ export default function DashboardPage() {
           <div className="flex flex-col items-center">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-3xl text-green-400">🔥</span>
-              <span className="font-serif text-4xl font-bold text-[#1F2937]">1</span>
+              <span className="font-serif text-4xl font-bold text-[#1F2937]">{streak}</span>
             </div>
             <p className="text-gray-500 text-sm font-light">Day streak</p>
           </div>
@@ -84,13 +114,13 @@ export default function DashboardPage() {
           <span className="text-center block w-full">Progress</span>
         </div>
 
-        {/* Placeholder text mimicking screenshot if chart is empty, but we show chart */}
-        {/* <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-            <span className="text-2xl font-serif text-gray-400">&lt;Create your own data visualization graph or table&gt;</span>
-        </div> */}
-
         {/* Recharts Implementation */}
         <div className="w-full h-[350px] min-h-[350px] relative">
+          {!hasHistory && (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-400 font-serif text-sm">
+              Finish a word challenge to see your scores here.
+            </div>
+          )}
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
@@ -105,18 +135,12 @@ export default function DashboardPage() {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                domain={[0, 9]}
+                domain={[0, 10]}
                 dx={-10}
               />
               <Tooltip
                 cursor={{ fill: 'transparent' }}
-                contentStyle={{
-                  borderRadius: '8px',
-                  border: 'none',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  backgroundColor: '#1F2937',
-                  color: '#fff'
-                }}
+                content={<CustomTooltip />}
               />
               {/* Using a darker green/black for the bars to match the "Take the test" button vibe or stick to Green/Blue theme? Screenshot shows empty state mostly. */}
               <Bar dataKey="score" radius={[4, 4, 4, 4]} barSize={20} fill="#1F2937">

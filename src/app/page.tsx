@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRandomWord, validateSentence, Word, ValidateResponse } from '@/lib/api';
+import { addScoreEntry } from '@/lib/progress';
+import { incrementStreak } from '@/lib/streak';
 
 export default function WordOfTheDayPage() {
     const buildImageUrl = (word: string) =>
@@ -64,6 +66,8 @@ export default function WordOfTheDayPage() {
             const result = await validateSentence(inputValue, wordData.word);
             const randomScore = computeRandomScore(inputValue);
             setValidationResult({ ...result, score: randomScore });
+            addScoreEntry(wordData.word, randomScore);
+            incrementStreak();
             setIsSubmitted(true);
         } catch (error) {
             console.error("Error validating sentence:", error);

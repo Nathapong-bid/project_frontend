@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRandomWord, Word } from '@/lib/api';
+import { addScoreEntry } from '@/lib/progress';
+import { incrementStreak } from '@/lib/streak';
 
 export default function WordOfTheDayPage() {
     const buildImageUrl = (word: string) =>
@@ -53,6 +55,8 @@ export default function WordOfTheDayPage() {
         const variance = Math.random() * 2 - 1;
         const score = Math.max(0, Math.min(10, parseFloat((lengthScore + variance).toFixed(1))));
         setRandomScore(score);
+        addScoreEntry(wordData.word, score);
+        incrementStreak();
         setIsSubmitted(true);
     };
 
