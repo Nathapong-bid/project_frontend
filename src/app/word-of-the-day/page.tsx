@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { getRandomWord, Word } from '@/lib/api';
 import { addScoreEntry } from '@/lib/progress';
 import { incrementStreak } from '@/lib/streak';
+import { sendToN8n } from "@/lib/n8n";
 
 export default function WordOfTheDayPage() {
     const buildImageUrl = (word: string) =>
@@ -48,17 +49,29 @@ export default function WordOfTheDayPage() {
         fetchWord();
     }, []);
 
-    const handleSubmit = () => {
-        // ในสถานการณ์จริง ตรงนี้จะยิง API ไปตรวจประโยค
-        const words = inputValue.trim().split(/\s+/).filter(Boolean).length;
-        const lengthScore = Math.min(words, 20) / 20 * 10;
-        const variance = Math.random() * 2 - 1;
-        const score = Math.max(0, Math.min(10, parseFloat((lengthScore + variance).toFixed(1))));
-        setRandomScore(score);
-        addScoreEntry(wordData.word, score);
-        incrementStreak();
-        setIsSubmitted(true);
-    };
+    const handleSubmit = async () => {
+    const words = inputValue.trim().split(/\s+/).filter(Boolean).length;
+    const lengthScore = Math.min(words, 20) / 20 * 10;
+    const variance = Math.random() * 2 - 1;
+    const score = Math.max(0, Math.min(10, parseFloat((lengthScore + variance).toFixed(1))));
+
+    setRandomScore(score);
+    addScoreEntry(wordData.word, score);
+    incrementStreak();
+    setIsSubmitted(true);
+
+    // 🚀 ส่งข้อมูลไป n8n
+    await sendToN8n({
+        event: "sentence_submitted",
+        word: wordData.word,
+        meaning: wordData.meaning,
+        userSentence: inputValue,
+        score: score,
+        timestamp: Date.now(),
+    });
+};
+
+    
 
     return (
         <div className="min-h-screen bg-[#94A3A5] flex items-center justify-center p-4">
