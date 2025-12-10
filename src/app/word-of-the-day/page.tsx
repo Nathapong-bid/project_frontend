@@ -4,34 +4,48 @@ import { useRouter } from 'next/navigation';
 import { getRandomWord, Word } from '@/lib/api';
 import { addScoreEntry } from '@/lib/progress';
 import { incrementStreak } from '@/lib/streak';
-import { sendToN8n } from "@/lib/n8n";
+import { sendToN8n } from "@/lib/sendToN8n";
 
 export default function WordOfTheDayPage() {
-    const buildImageUrl = (word: string) =>
-        word?.toLowerCase() === "advertisement"
-            ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsg0RNrXvENE7KZufyFShLisR0_CV0wIaTVA&s"
-            : word?.toLowerCase() === "candidate"
-                ? "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4kSnndKFbrsS36bmzm49EAI9e5M_97YvBZQ&s"
-            : word?.toLowerCase() === "elevator"
-                ? "https://seacoastconstruction.net/wp-content/uploads/2022/06/derrick-treadwell-m01bajOe8E0-unsplash-min-scaled.jpg"
-            : word?.toLowerCase() === "rain"
-                ? "https://media.istockphoto.com/id/1257951336/photo/transparent-umbrella-under-rain-against-water-drops-splash-background-rainy-weather-concept.jpg?s=612x612&w=0&k=20&c=lNvbIw1wReb-owe7_rMgW8lZz1zElqs5BOY1AZhyRXs="
-            : word?.toLowerCase() === "generation"
-                ? "https://images.squarespace-cdn.com/content/v1/5e19698d9383f8245b75341c/1582095676166-H4C8B82GTND8ZAZ4X1OJ/FourGenerations_Judith-Hill-Photography"
-            : word?.toLowerCase() === "vacation"
-                ? "https://thumbs.dreamstime.com/b/beach-background-beautiful-beach-landscape-tropical-nature-scene-palm-trees-blue-sky-summer-holiday-vacation-concept-93725477.jpg"
-            : `https://source.unsplash.com/featured/?${encodeURIComponent(word || "english word")}`;
+    // โค้ด buildImageUrl เดิม
+    const buildImageUrl = (word: string): string => {
+    // 1. ทำให้เป็นตัวอักษรเล็กและจัดการ null/undefined
+    const lowerWord = word?.toLowerCase() || ""; 
 
+    // 2. ใช้ switch statement เพื่อความชัดเจนในการกำหนด URL
+    switch (lowerWord) {
+        case "advertisement":
+            return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsg0RNrXvENE7KZufyFShLisR0_CV0wIaTVA&s";
+            
+        case "candidate":
+            return "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4kSnndKFbrsS36bmzm49EAI9e5M_97YvBZQ&s";
+            
+        case "elevator":
+            return "https://seacoastconstruction.net/wp-content/uploads/2022/06/derrick-treadwell-m01bajOe8E0-unsplash-min-scaled.jpg";
+            
+        case "rain":
+            return "https://media.istockphoto.com/id/1257951336/photo/transparent-umbrella-under-rain-against-water-drops-splash-background-rainy-weather-concept.jpg?s=612x612&w=0&k=20&c=lNvbIw1wReb-owe7_rMgW8lZz1zElqs5BOY1AZhyRXs=";
+            
+        case "generation":
+            return "https://images.squarespace-cdn.com/content/v1/5e19698d9383f8245b75341c/1582095676166-H4C8B82GTND8ZAZ4X1OJ/FourGenerations_Judith-Hill-Photography";
+            
+        case "vacation":
+            return "https://thumbs.dreamstime.com/b/beach-background-beautiful-beach-landscape-tropical-nature-scene-palm-trees-blue-sky-summer-holiday-vacation-concept-93725477.jpg";
+
+    }
+};
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [inputValue, setInputValue] = useState("");
     const [isLoading, setIsLoading] = useState(true);
-    const [randomScore, setRandomScore] = useState(0);
+    // เปลี่ยนจาก number เป็น number เพราะใช้ toFixed(1) ในการแสดงผล
+    const [randomScore, setRandomScore] = useState(0 as number); 
     const [wordData, setWordData] = useState<Word>({
         word: "",
         meaning: "",
         level: "",
         example: "",
     });
+    
     const router = useRouter();
 
     useEffect(() => {
@@ -50,36 +64,61 @@ export default function WordOfTheDayPage() {
     }, []);
 
     const handleSubmit = async () => {
-    const words = inputValue.trim().split(/\s+/).filter(Boolean).length;
-    const lengthScore = Math.min(words, 20) / 20 * 10;
-    const variance = Math.random() * 2 - 1;
-    const score = Math.max(0, Math.min(10, parseFloat((lengthScore + variance).toFixed(1))));
+        let scoreFloat = 0;
+        let finalScoreForProgress = 0; // คะแนนที่ใช้ในการบันทึก (เป็นจำนวนเต็ม 0-10)
 
-    setRandomScore(score);
-    addScoreEntry(wordData.word, score);
-    incrementStreak();
-    setIsSubmitted(true);
+        const trimmedInput = inputValue.trim();
 
-    // 🚀 ส่งข้อมูลไป n8n
-    await sendToN8n({
-        event: "sentence_submitted",
-        word: wordData.word,
-        meaning: wordData.meaning,
-        userSentence: inputValue,
-        score: score,
-        timestamp: Date.now(),
-    });
-};
+        if (!trimmedInput) {
+            // 1. ถ้าว่างเปล่า ให้คะแนน 0 ทั้งหมด
+            scoreFloat = 0;
+            finalScoreForProgress = 0;
+        } else {
+            // 2. ถ้าไม่ว่าง ให้คำนวณคะแนน (0.0 - 10.0)
+            const words = trimmedInput.split(/\s+/).filter(Boolean).length;
+            // คำนวณคะแนนพื้นฐาน (สูงสุด 10 จาก 20 คำ)
+            const lengthScore = Math.min(words, 20) / 20 * 10;
+            const variance = Math.random() * 2 - 1; // สุ่ม +/- 1
+            
+            // คะแนนทศนิยม (1-10.0)
+            scoreFloat = Math.max(0, Math.min(10, parseFloat((lengthScore + variance).toFixed(1))));
 
-    
+            // 🎯 ปรับ Logic: ถ้าจำนวนคำน้อยมาก (เช่น 1 คำ) แม้คะแนนจะคำนวณได้ แต่เราต้องการให้ได้ 0
+            if (words < 3) {
+                scoreFloat = 0;
+            }
 
+            // 🎯 คะแนนที่ใช้ในการบันทึก: ต้องปัดเศษให้เป็นจำนวนเต็ม (0-10)
+            finalScoreForProgress = Math.round(scoreFloat);
+        }
+        
+        // 🚀 ตั้งค่าคะแนนทศนิยมเพื่อแสดงผลใน UI
+        setRandomScore(scoreFloat); 
+        
+        // 💾 บันทึกคะแนนที่เป็นจำนวนเต็ม (0-10)
+        addScoreEntry(wordData.word, finalScoreForProgress); 
+        incrementStreak();
+        setIsSubmitted(true);
+
+        // 🚀 ส่งข้อมูลไป n8n (ใช้คะแนนจำนวนเต็ม)
+        await sendToN8n({
+            event: "sentence_submitted",
+            word: wordData.word,
+            meaning: wordData.meaning,
+            userSentence: inputValue,
+            score: finalScoreForProgress, // ส่งคะแนนจำนวนเต็มไป n8n
+            timestamp: Date.now(),
+        });
+    };
+
+    // ... (ส่วน UI เดิม) ...
     return (
         <div className="min-h-screen bg-[#94A3A5] flex items-center justify-center p-4">
             {/* Main Card Container */}
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 min-h-[500px] flex flex-col justify-center relative">
 
                 {!isSubmitted ? (
-                    // ================= STATE 1: CHALLENGE FORM (ภาพ 3) =================
+                    // ================= STATE 1: CHALLENGE FORM =================
                     <>
                         <h1 className="font-serif text-3xl font-bold text-gray-800 mb-2">Word of the day</h1>
                         <p className="text-gray-500 mb-6">Practice writing a meaningful sentence using today's word.</p>
@@ -154,7 +193,7 @@ export default function WordOfTheDayPage() {
                         </div>
                     </>
                 ) : (
-                    // ================= STATE 2: COMPLETED (ภาพ 4) =================
+                    // ================= STATE 2: COMPLETED =================
                     <div className="text-center">
                         <h1 className="font-serif text-3xl font-bold text-gray-800 mb-4">Challenge completed</h1>
 
@@ -163,7 +202,8 @@ export default function WordOfTheDayPage() {
                                 Level {wordData.level || "Beginner"}
                             </span>
                             <span className="font-serif bg-[#F3E8FF] text-[#6B21A8] text-sm font-bold px-4 py-1 rounded">
-                                Score {randomScore.toFixed(1)} / 10
+                                {/* 🎯 แสดงผลทศนิยม 1 ตำแหน่ง */}
+                                Score {randomScore.toFixed(1)} / 10 
                             </span>
                         </div>
 

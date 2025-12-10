@@ -1,81 +1,76 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-
 export interface Word {
-  word: string;
-  meaning?: string;
-  level?: string;
-  example?: string;
-  word_level?: string; // backend may send word_level
+    word: string;
+    meaning: string;
+    level: string; // เปลี่ยนจาก word_level เป็น level
+    example: string;
 }
 
-export interface ValidateResponse {
-  score: number;
-  suggestion: string;
-  feedback: string;
-}
+// 🎯 ข้อมูล Mock Data ใหม่ (Fallback Data)
+const FALLBACK_WORDS: Word[] = [
+    {
+        word: "Advertisement",
+        meaning: "a notice or announcement in a public medium promoting a product, service, or event or publicizing a job vacancy.",
+        level: "Intermediate", // ใช้ level แทน word_level
+        example: "Example : He learned about the job from an advertisement in the newspaper.",
+    },
+    {
+        word: "Candidate",
+        meaning: "a person who applies for a job or other position or is nominated for election.",
+        level: "Advanced",
+        example: "Example : The Democratic candidate is leading in the polls.",
+    },
+    {
+        word: "Elevator",
+        meaning: "a platform or compartment housed in a shaft for raising and lowering people or things to different floors or levels.",
+        level: "Beginner",
+        example: "Example : We took the elevator to the 10th floor.",
+    },
+    {
+        word: "Generation",
+        meaning: "all of the people born and living at about the same time, regarded collectively.",
+        level: "Advanced",
+        example: "Example : This new phone is the latest generation of smartphones.",
+    },
+    {
+        word: "Rain",
+        meaning: "moisture condensed from the atmosphere that falls visibly in separate drops.",
+        level: "Beginner",
+        example: "Example : We're expecting a lot of rain this weekend.",
+    },
+    {
+        word: "Vacation",
+        meaning: "an extended period of leisure and recreation, especially one spent away from home or in traveling.",
+        level: "Intermediate",
+        example: "Example : We are planning a vacation to Italy next summer.",
+    },
+];
+
 
 export async function getRandomWord(): Promise<Word> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/word`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    // ... (โค้ด try block เดิม) ...
+    
+    try {
+        // ... (โค้ด fetch API เดิม) ...
+        const response = await fetch("https://unflagrant-lois-dosimetric.ngrok-free.dev/api/webhook/worddee", { method: "GET", headers: { "Content-Type": "application/json" } });
 
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+        if (!response.ok) {
+            // โค้ดจะตกมาที่นี่เมื่อ n8n คืนค่า 404/400
+            throw new Error(`Failed to fetch word. Status: ${response.status}`);
+        }
+        
+        const wordData = await response.json() as Word;
+        
+        if (!wordData || !wordData.word) {
+            throw new Error("Received invalid word data from API.");
+        }
+        
+        return wordData;
+
+    } catch (error) {
+        console.error("Error in getRandomWord, using fallback data:", error);
+        
+        // 🎯 สุ่มเลือก 1 คำศัพท์จาก Array ใหม่
+        const randomIndex = Math.floor(Math.random() * FALLBACK_WORDS.length);
+        return FALLBACK_WORDS[randomIndex];
     }
-
-    const data = await response.json();
-    // Support both raw word objects and wrapped payloads like { data: { ...word } }
-    const word = (data && data.data) ? data.data : data;
-    // Normalize level key to match UI
-    const level = word.level || word.word_level || word.difficulty_level;
-    return { ...word, level };
-  } catch (error) {
-    console.error("Error fetching word:", error);
-    // Fallback mock data
-    return {
-      word: "Runway",
-      meaning: "a strip of hard ground along which aircraft take off and land",
-      level: "Beginner",
-      example: "The jet braked hard as its wheels touched the runway.",
-    };
-  }
-}
-
-export async function validateSentence(
-  sentence: string,
-  word: string
-): Promise<ValidateResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/validate-sentence`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        sentence,
-        word,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error validating sentence:", error);
-    // Fallback mock response
-    return {
-      score: 8.5,
-      suggestion:
-        "The airport's runway is undergoing extensive reconstruction to enhance safety measures.",
-      feedback:
-        "The word 'runway' is used correctly in the sentence to refer to the strip of land where planes take off and land. The suggestion sentence provides a more advanced structure and vocabulary.",
-    };
-  }
 }
